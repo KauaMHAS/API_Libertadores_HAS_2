@@ -1,0 +1,9 @@
+Aula 10 - Mapas
+
+- Utilizar projeto AppLibertadoresHAS e realizar as instruções do PDF da Aula 10 
+
+- Chave de API Google para mapas será disponibilizada na pasta da aula.
+
+- Trazer cabos USB próxima aula
+
+- Tools --> Android --> Android Device Manager -> Play emulador
