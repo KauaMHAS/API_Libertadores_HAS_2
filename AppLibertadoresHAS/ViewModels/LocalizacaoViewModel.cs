@@ -1,7 +1,10 @@
-﻿using Microsoft.Maui.Controls.Maps;
+﻿using AppLibertadoresHAS.Models;
+using AppLibertadoresHAS.Services;
+using Microsoft.Maui.Controls.Maps;
 using Microsoft.Maui.Maps;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Text;
 using Map = Microsoft.Maui.Controls.Maps.Map;
 
@@ -9,6 +12,17 @@ namespace AppLibertadoresHAS.ViewModels
 {
     internal class LocalizacaoViewModel : BaseViewModel
     {
+        private UsuarioService uService;
+
+        public LocalizacaoViewModel()
+        {
+            string token = Preferences.Get("UsuarioToken", string.Empty);
+            uService = new UsuarioService(token);
+        }
+
+        private CancellationTokenSource _cancelTokenSource;
+        private bool _isCheckingLocation;
+
         private Map meuMapa;
 
         public Map MeuMapa
@@ -21,6 +35,62 @@ namespace AppLibertadoresHAS.ViewModels
                     meuMapa = value;
                     OnPropertyChanged();
                 }
+            }
+        }
+
+        public async void ChecarLocalizacao()
+        {
+            try
+            {
+                _isCheckingLocation = true;
+                _cancelTokenSource = new CancellationTokenSource();
+                GeolocationRequest request = new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(10));
+
+                Location location = await Geolocation.Default.GetLocationAsync(request, _cancelTokenSource.Token);
+
+                Usuario uLoc = new Usuario();
+                uLoc.Id = Preferences.Get("UsuarioId", 0);
+                uLoc.Latitude = location.Latitude;
+                uLoc.Longitude = location.Longitude;
+
+                await uService.PutAtualizarLocalizacaoAsync(uLoc);
+            }
+            catch (Exception ex)
+            {
+                await Application.Current.MainPage.DisplayAlert("Erro", ex.Message, "Ok");             }
+        }
+
+        public async void ExibirUsuarioNoMapa()
+        {
+            try
+            {
+                ObservableCollection<Usuario> ocUsuarios = await uService.GetUsuariosAsync();
+                List<Usuario> listaUsuarios = new List<Usuario>(ocUsuarios);
+                Map map = new Map();
+
+                foreach (Usuario u in listaUsuarios)
+                {
+                    if (u.Latitude != null && u.Longitude != null)
+                    {
+                        double latitude = (double)u.Latitude;
+                        double longitude = (double)u.Longitude;
+                        Location location = new Location(latitude, longitude);
+
+                        Pin pinAtual = new Pin()
+                        {
+                            Type = PinType.Place,
+                            Label = u.Username,
+                            Address = $"E-mail: {u.Email}",
+                            Location = location
+                        };
+                        map.Pins.Add(pinAtual);
+                    }
+                }
+                MeuMapa = map;
+            }
+            catch (Exception ex)
+            {
+                await Application.Current.MainPage.DisplayAlert("Erro", ex.Message, "Ok");
             }
         }
 
